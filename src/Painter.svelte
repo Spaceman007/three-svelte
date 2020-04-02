@@ -1,30 +1,13 @@
 <script>
   import { Scene, PerspectiveCamera, WebGLRenderer,
-    BoxGeometry, MeshBasicMaterial, Mesh
+    BoxGeometry, MeshBasicMaterial, Mesh, Group, Box3, Sphere
   } from 'three'
   import { TrackballControls } from './utils/TrackballControls'
   import { onMount } from 'svelte'
 
   let canvas
 
-  async function init () {
-
-    let width = canvas.clientWidth
-    let height = canvas.clientHeight
-
-    let scene = new Scene()
-    let camera = new PerspectiveCamera(45, width / height, 0.1, 1000)
-    let renderer = new WebGLRenderer({
-      canvas,
-      antialias: true
-    })
-
-    let controls = new TrackballControls(camera, canvas)
-
-    renderer.setPixelRatio(window.devicePixelRatio)
-    renderer.setSize(width, height)
-    renderer.setClearColor(0xF1F7FE)
-
+  function makeObjects () {
     let cubeGeo = new BoxGeometry(9, 9, 9)
     let cubeMat = new MeshBasicMaterial({
       color: 0xff0000
@@ -38,10 +21,48 @@
 
     cube.position.set(-4, 3, 0)
     cubeWire.position.copy(cube.position)
-    scene.add(cube, cubeWire)
 
-    camera.position.set(-30, 40, 30)
-    camera.lookAt(cube)
+    return [cube, cubeWire]
+  }
+
+  async function init () {
+
+    let width = canvas.clientWidth
+    let height = canvas.clientHeight
+    let group = new Group()
+
+    let scene = new Scene()
+    scene.add(group)
+
+    let camera = new PerspectiveCamera(45, width / height, 0.1, 1000)
+    let renderer = new WebGLRenderer({
+      canvas,
+      antialias: true
+    })
+
+    let objs = makeObjects()
+    group.add(...objs)
+
+    // set up bounding box for a proper view
+    let bbox = new Box3()
+    let bsphere = new Sphere()
+    bbox.expandByObject(group)
+    bbox.getBoundingSphere(bsphere)
+
+    // init trackball controls
+    let controls = new TrackballControls(camera, canvas)
+    bbox.getCenter(controls.target)
+
+    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.setSize(width, height)
+    renderer.setClearColor(0xF1F7FE)
+
+    // update camera
+    camera.position.copy(bsphere.center.clone().addScalar(bsphere.radius * 2))
+    camera.far = bsphere.radius * 50
+    camera.near = camera.far / 10000
+    camera.lookAt(bsphere.center.clone())
+    camera.updateProjectionMatrix()
 
     function render () {
       renderer.render(scene, camera)
@@ -52,8 +73,8 @@
     render()
   }
 
-  onMount(() => {
-    init()
+  onMount(async () => {
+    await init()
   })
 
 </script>
