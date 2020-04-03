@@ -4,6 +4,7 @@
   } from 'three'
   import { TrackballControls } from './utils/TrackballControls'
   import { onMount } from 'svelte'
+  import Stats from 'three/examples/jsm/libs/stats.module.js'
 
   let canvas
 
@@ -30,6 +31,12 @@
     let width = canvas.clientWidth
     let height = canvas.clientHeight
     let group = new Group()
+    let stats = new Stats()
+
+    stats.dom.style.right = '0px'
+    stats.dom.style.width = '140px'
+    stats.dom.style.left = ''
+    window.document.body.prepend(stats.dom)
 
     let scene = new Scene()
     scene.add(group)
@@ -67,6 +74,7 @@
     function render () {
       renderer.render(scene, camera)
       controls.update()
+      stats.update()
       requestAnimationFrame(render)
     }
 
